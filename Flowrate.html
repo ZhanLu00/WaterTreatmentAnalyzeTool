@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Flowrate Equalization Calculator</title>
+	<meta name = "author" content = "Jan Lu, Peng Jian, University of Saskatchewan">
+	<meta name = "viewport" content = " width = device-width, initial-scale = 1.0">
+	<meta charset="utf-8">
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css">
+
+	<link rel="stylesheet" type="text/css" href="stylesheet.html">
+
+	<!-- jQuery library -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+	<script>
+
+		$(document).ready(function(){
+			$("form").submit(function(event){
+				//this line disable the action inside of form
+				event.preventDefault();
+				//.val() to get the actual value of the id
+				var formName;
+				var tUnit = $("#form-tUnit").val();
+				var time = $("#form-time").val();
+				var qUnit = $("#form-qUnit").val();
+				var flowrate = $("#form-flowrate").val();
+				var submit = $("#form-submit").val();
+				// set up the form name
+				theForms = document.getElementsByTagName("form");
+				for(i=0;i<theForms.length;i++){
+					formName = theForms[i].name;
+				}
+
+
+				$("#resultV").load("action_page.php", {
+					//left-right is key-value, which the value just got from extract info from above
+					
+					formName: formName,
+					tUnit: tUnit,
+					time: time,
+					qUnit: qUnit,
+					flowrate: flowrate,
+					submit: submit
+					
+				}, function(responseTxt, statusTxt){
+					var x =document.getElementById("resultV").innerHTML;
+					if(statusTxt == "success"){
+					}else if(statusTxt == "error"){
+				        alert("Error: " + xhr.status + ": " + xhr.statusText);
+				    }else if(r.slice(r.indexOf("#")+1) == ""){
+				    	alert();
+				    }
+				    
+				    
+				});
+
+				function prepareForPloting(){
+					var responseT = document.getElementById("resultV").innerHTML;
+					var num = "";
+					var data = [];
+					var t_ = true;
+					var a = [];
+
+
+					for (i = 0; i<responseT.length; i++){
+						switch (responseT[i]){
+							case "#":
+							// store the output flowrate
+								a[0].push(Number(num));
+								return a;
+								break;
+
+							case "^":
+							// store data and clear the store array
+								data.push(Number(num));
+								num = "";
+
+								if (a.length == 0) {
+									for (let i= 0; i < data.length; i++) {
+										a.push([data[i]]);
+									}
+								}else{
+									for (let i = 0; i<data.length; i++){
+										a[i].push(data[i]);
+									}
+								}
+
+								data.length = 0;
+								break;
+								
+							case "?":
+							// store the number
+								data.push(Number(num));
+								num = "";
+								break;
+
+							
+							default:
+							// store data in string
+								num += responseT[i];
+								break;
+						}
+					}
+					
+					return a;
+				}
+
+				var r = document.getElementById("resultV").innerHTML;
+				
+				var x = prepareForPloting();
+
+				
+				document.getElementById("testingData").innerHTML = x;
+				document.getElementById("trueResult").innerHTML = r.slice(r.indexOf("#")+1);
+				
+				function plotQT(data){
+					var chart = new CanvasJS.Chart("graphQT", {
+						animationEnabled: true,  
+						title:{
+							text: "Time vs. Influent flowrate",
+						},
+						axisY: {
+							title: "Total Volume (m^3)",
+							// valueFormatString: "#0,,.",
+							// // suffix: "mn",
+							// prefix: "$"
+						},
+						axisX: {
+							title: "Influent flowrate(m^3/s)",
+						},
+						data: [{
+							type: "splineArea",
+							color: "rgba(54,158,173,.7)",
+							markerSize: 5,
+							// xValueFormatString: "YYYY",
+							// yValueFormatString: "$#,##0.##",
+							dataPoints: []
+							
+						}]
+					});
+
+					chart.render();
+					
+					for (var i =0; i<data.length; i++) {
+						data[i];
+						chart.options.data[0].dataPoints.push({x:data[i][0], y: data[i][2]});
+					}
+					chart.render();
+
+				}
+				function plotTV(data){
+					var chart = new CanvasJS.Chart("graphVT", {
+						animationEnabled: true,  
+						title:{
+							text: "Time vs. Total Volume",
+						},
+						axisY: {
+							title: "Total Volume (m^3)",
+							// valueFormatString: "#0,,.",
+							// // suffix: "mn",
+							// prefix: "$"
+						},
+						axisX: {
+							title: "Influent flowrate(m^3/s)",
+						},
+						data: [{
+							type: "splineArea",
+							color: "rgba(54,158,173,.7)",
+							markerSize: 5,
+							// xValueFormatString: "YYYY",
+							// yValueFormatString: "$#,##0.##",
+							dataPoints: []
+							
+						}]
+					});
+
+					chart.render();
+					
+					for (var i =0; i<data.length; i++) {
+						data[i];
+						chart.options.data[0].dataPoints.push({x:data[i][0], y: data[i][1]});
+					}
+					chart.render();
+				
+				}
+
+				function testingPlot(data0){
+					// trying chart.js module
+					var data1 = [];
+					var label1 = [];
+					var volume = [];
+					for (var i= 0; i < data0.length; i++) {
+						data1.push({x: data0[i][0], y: data0[i][1]});
+						label1.push(data0[i][0]);
+						volume.push(data0[i][1]);
+					}
+
+					var theplace = document.getElementById("graphTesting2");
+					var chart = new Chart(theplace, {
+						type: "line",
+						data: {
+							labels: label1,
+							datasets: [{
+								data: volume,
+								fill: true,
+								lineTension: 0.1,
+								borderColor: "rgba(75, 192, 192, 1)",
+								borderCapStyle: 'butt',
+								borderDash: [],
+								borderDashOffset: 0.0,
+								borderJoinStyle: 'miter',
+								pointBorderColor: "rgba(75, 192, 192, 1)",
+								pointBackgroundColor: "#fff",
+								pointBorderWidth: 1,
+								pointHoverRadius: 5,
+								pointHoverBackgroundColor: "rgba(75, 192, 192, 1)",
+								pointHoverBorderColor: "rgba(220, 220, 220, 1)",
+								pointHoverBorderWidth: 2,
+								pointRadius: 1,
+								pointHitRadius: 10
+							}]
+						},
+						options:{
+							responsive: true,
+							title:{
+								display: true,
+								text: "Total Volume vs. Time"
+							},
+							hover: {
+								mode: "nearest",
+								intersect: true
+							},
+							scales: {
+								xAxes: [{
+									display: true,
+									scaleLabel: {
+										display: true,
+										labelString: "Time"
+									}
+								}],
+								yAxes: [{
+									display: true,
+									scaleLabel: {
+										display: true,
+										labelString: "Volume"
+									}
+								}]
+							}
+
+						}
+					});
+
+				}
+
+				// function testingPlot2(data0){
+				// 	// trying chart.js module
+				// 	var data1 = [];
+				// 	var timeIn = [], timeOut = [];
+				// 	for (var i= 0; i < data.length; i++) {
+				// 		timeIn.push({x: data0[i][0], y: data0[i][2]});
+				// 		timeOut.push({x:data0[i][0], y: data0[0][3]});
+				// 	}
+				// 	var theplace = document.getElementById("graphTesting1");
+				// 	var chart = new Chart(theplace, {
+				// 		type: "line",
+				// 		data: {
+				// 			datasets: [{
+				// 				label: "Influent flowrate",
+				// 				data: timeIn
+				// 			},{
+				// 				label: "Outfluent flowrate",
+				// 				data: timeOut
+				// 			}]
+				// 		},
+				// 		options:{
+				// 			responsive: true,
+				// 			title:{
+				// 				display: true,
+				// 				text: "Time vs Flowrate"
+				// 			},
+				// 			hover: {
+				// 				mode: "nearest",
+				// 				intersect: true
+				// 			},
+				// 			scales: {
+				// 				xAxes: [{
+				// 					display: true,
+				// 					scaleLabel: {
+				// 						display: true,
+				// 						labelString: "Time"
+				// 					}
+				// 				}],
+				// 				yAxes: [{
+				// 					display: true,
+				// 					scaleLabel: {
+				// 						display: true,
+				// 						labelString: "flowrate"
+				// 					}
+				// 				}]
+				// 			}
+
+				// 		}
+				// 	});
+
+				// }
+				// write code for graphing here, 
+				// make sure use the data from the server
+				plotQT(x);
+				plotTV(x);
+				testingPlot(x);
+				//testingPlot2(x);
+
+				
+			})
+
+			// //This is to check whether the php page has any error
+			// $("button").click(function(){
+			// 	$("#resultV").post("action_page.php");
+			// 	alert("finished");
+			// });
+
+		});
+	</script>
+
+</head>
+
+<body class= "bg-light">
+
+<!-- ------------------HEADER-------------------------------------------------------------- -->
+<div class= "jumbotron jumbotron-fluid h-30" style = " margin-bottom:0">
+	<div class =  "container">
+		<h2>Here is the title</h2>
+		<h6 class= "font-weight-normal">Can write some description later</h6>
+	</div>
+</div>
+
+
+<!-- ------------------NAV BAR------------------------------------------------------------- -->
+<div class= "bg-success">
+	<div class= "container">
+		<nav class = "navbar navbar-expand-sm stickey-top nav-left justify-content-left">
+			<ul class = "navbar-nav">
+				<li class = "nav-item">
+					<a class= "nav-link text-light" href="index.html">Home</a>
+				</li>
+				<li class = "nav-item">
+					<a class= "nav-link text-light" href = "Flowrate.html">Flowrate Equa</a>
+				</li>
+				<li class = "nav-item">
+					<a class= "nav-link text-light" href = "concenEqua.html" >Concentration Equa</a>
+				</li>
+				<li class = "nav-item">
+					<a class= "nav-link text-light" href = "Con%26Flo.html" >Flow&Concen Equa</a>
+				</li>	
+				<li class = "nav-item">
+					<a class= "nav-link text-light" href="About%20US.html">About US</a>
+				</li>
+			</ul>	
+		</nav>
+	</div>
+</div>
+
+<!-- ------------------SCROLLSPY----------------------------------------------------------- -->
+<div class= "container bg-white">
+	<div class= "row">
+		<div data-spy= "scroll" class= "col-sm-3" role= "navigation">
+			<nav id="navbar-sidebar" class="navbar navbar-light bg-dark">
+			  <a class="navbar-brand" href="#">Navbar</a>
+			  <ul class="nav nav-pills">
+			    <li class="nav-item">
+			      <a class="nav-link" href="#title">Title</a>
+			    </li><br>
+			    <li class="nav-item">
+			      <a class="nav-link" href="#intro">Introduction</a>
+			    </li><br>
+			    <li class="nav-item">
+			      <a class="nav-link" href="#input">Input</a>
+			    </li><br>
+			    <li class="nav-item dropdown">
+			      <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Dropdown</a>
+			      <div class="dropdown-menu">
+			        <a class="dropdown-item" href="#one">one</a>
+			        <a class="dropdown-item" href="#two">two</a>
+			        <div role="separator" class="dropdown-divider"></div>
+			        <a class="dropdown-item" href="#three">three</a>
+			      </div><br>
+			    </li>
+			  </ul>
+			</nav>
+		</div>
+		<div class= "col-sm-9 bg-light">
+			<div data-spy="scroll" data-target="#navbar-sidebar" data-offset="0">
+				<div class= "container">
+					<h4 id="title">Here is the title</h4>
+					<p>description, Sunt in culpa qui officia deserunt mollit anim id est laborum consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco.</p><br>
+					<h4 id="intro">Introduction to the Algorithm</h4>
+					<p>text, Gabatarwa ga Algorithm, gabatarwar zuwa algorithm gabatarwar zuwa algorithm. chiziviso chegadziridzo chiziviso chegadziridzo chiziviso chegadziridzo chiziviso chegadziridzo chiziviso chegadziridzo chiziviso chegadziridzochiziviso chegadziridzochiziviso chegadziridzo chiziviso chegadziridzo chiziviso chegadziridzo chiziviso chegadziridzo. Hordhaca algorithm Hordhaca algorithm Hordhaca algorithm Hordhaca algorithmHordhaca algorithmHordhaca algorithmHordhaca algo rithm, intruduzioni à l'algoritmu intruduzioni à l'algoritmu intruduzi oni à l'algoritmu intrud uzioni à l'algoritmul. intruduzioni à l'alg oritm uint rud uzioni à l'algoritmuin truduzio ni à l'algoritmui ntruduzioni à l'algorit muint ruduzioni à l'algoritmuin trud uzioni à l'algoritmu intruduzioni à l'algori tmuin truduz ioni à l'algoritmui ntruduzio ni à l'algori tmuint ruduzioni à l'algori tmuin truduzioni à l'algoritmui ntrud uzioni à l'algori tmuintrudu zioni à l'algoritmuintr uduzioni  à l'algoritmui n truduzioni à l'algoritmui ntru duzi oni à l'algoritmuint ruduzioni à l'algor itmuintru duzioni à l'algori  tmuintru duzioni à l'algorit muintr uduzioni à l'algoritmu intruduz  ioni à l'algo rit mui ntrud uzioni à l'algor tmuint rudu zioni à l'algori tmuin tr uduzioni à l'algoritmu. </p><br>
+					<h4 id="input">Title Here for Input</h4>
+					<!--The input, form format and submit------>
+					<form id= "form" name= "part1" action="action_page.php" method="POST">
+						<fieldset>
+							<legend>Time & Flowrate:</legend>
+							<div class= "row">
+								<div class = "col-md-6">
+									Time: (unit)
+									<select id= "form-tUnit" name="tUnit">
+										<option value="second">second</option>
+										<option value="minute">minute</option>
+										<option value="hour">hour</option>
+										<option value="day">day</option>
+									</select><br><br>
+									<textarea id= "form-time" name="time" type="time" rows="10" cols="20" placeholder="Copy the time here, one data per line" required></textarea>
+								</div>
+								<div class = "col-md-6">
+									Flowrate:  (unit)
+									<select id= "form-qUnit" name="qUnit">
+										<option value="m3/second">m<sup>3</sup>/s</option>
+										<option value="m3/minute">m<sup>3</sup>/min</option>
+										<option value="m3/hour">m<sup>3</sup>hr</option>
+									</select><br><br>
+									<textarea id= "form-flowrate" name="flowrate" type="number" rows="10" cols="20" placeHolder="Copy the flowrate here, one data per line" required></textarea>
+								</div>
+							</div>
+							<!-- <button onclick="document.getElementById('result').innerHTML = computeAverageP1(time, qUnit)">Submit
+							</button> -->
+							<!-- <input type="submit" id= "submit"> -->
+							<button id="form-submit" type= "submit" value= "submit">submit</button>
+						</fieldset>
+					</form>
+					<br><br>
+					<!-- the output, the volume and the graph--->
+					<h4 id="result">Result</h4>
+					<p>here is the result:</p>
+					<p id="resultV" style= "display: none;"> text</p><br>
+					<p id="trueResult"></p>
+					<h4 id="graph">Graph</h4>
+					<p id="testingData" class="secondary" style= "display: none;"></p>
+					<p id="graphQT" style="height:370px">text</p><br>
+					<p id="graphVT" style="height:370px">text</p><br>
+					<div>
+						<!-- <canvas id= "graphTesting1"></canvas> -->
+						<canvas id= "graphTesting2"></canvas>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+
+
+<footer>
+	<div class= "jumbotron">
+		<p class= "text-center">&copy; 2018 Jan Lu. All right reserved.</p>
+	</div>
+</footer>
+
+
+
+<!-- Popper JS / Tether -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js"></script>
+
+<!-- Latest compiled JavaScript / Bootstrap JS. -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js"></script>
+
+<!-- The algorithm -->
+<script src="javaScript.js"></script>
+
+<!-- The graphing source -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.js"></script>
+<script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
+<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+
+
+</body>
+
+</html>
